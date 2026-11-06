@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: edutrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: edutrack
+      POSTGRES_PASSWORD: edutrack_dev_password
+      POSTGRES_DB: edutrack_lite
+    ports:
+      - "5435:5432"
+    volumes:
+      - edutrack_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edutrack -d edutrack_lite"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  edutrack_pgdata:
