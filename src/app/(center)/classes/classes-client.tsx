@@ -99,9 +99,9 @@ export function ClassesClient({
   const [isArchiving, startTransition] = useTransition();
 
   // Form controlled states for live deduction calculation & schedule builder
-  const [tuition, setTuition] = useState(800000);
-  const [sessions, setSessions] = useState(16);
-  const [deduction, setDeduction] = useState(50000);
+  const [tuition, setTuition] = useState<number | string>(800000);
+  const [sessions, setSessions] = useState<number | string>(16);
+  const [deduction, setDeduction] = useState<number | string>(50000);
   const [manualDeduction, setManualDeduction] = useState(false);
   const [slots, setSlots] = useState<ScheduleSlot[]>([
     { dayOfWeek: 2, startTime: "17:30", endTime: "19:00" },
@@ -136,8 +136,12 @@ export function ClassesClient({
   };
 
   useEffect(() => {
-    if (!manualDeduction) {
-      setDeduction(calculateRoundedSessionPrice(tuition, sessions, roundingUnit));
+    if (!manualDeduction && tuition !== "" && sessions !== "") {
+      const t = Number(tuition);
+      const s = Number(sessions);
+      if (Number.isFinite(t) && t >= 0 && Number.isFinite(s) && s > 0) {
+        setDeduction(calculateRoundedSessionPrice(t, s, roundingUnit));
+      }
     }
   }, [tuition, sessions, roundingUnit, manualDeduction]);
 
@@ -363,7 +367,7 @@ export function ClassesClient({
         title={editingClass ? "Chỉnh sửa Ca học" : "Tạo Ca học mới"}
         description="Cấu hình lịch học trong tuần và chu kỳ tính học phí tự động."
       >
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} className="space-y-4 pb-2">
           <input
             type="hidden"
             name="classId"
@@ -396,7 +400,6 @@ export function ClassesClient({
               name="name"
               type="text"
               required
-              autoFocus
               defaultValue={editingClass?.name ?? ""}
               placeholder="VD: Toán Lớp 4 - Ca 1"
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5"
@@ -552,7 +555,7 @@ export function ClassesClient({
                 max={100}
                 required
                 value={sessions}
-                onChange={(e) => setSessions(Number(e.target.value || 1))}
+                onChange={(e) => setSessions(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
               />
             </div>
@@ -572,7 +575,7 @@ export function ClassesClient({
                 step={1000}
                 required
                 value={tuition}
-                onChange={(e) => setTuition(Number(e.target.value || 0))}
+                onChange={(e) => setTuition(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
               />
             </div>
@@ -594,7 +597,7 @@ export function ClassesClient({
                 value={deduction}
                 onChange={(e) => {
                   setManualDeduction(true);
-                  setDeduction(Number(e.target.value || 0));
+                  setDeduction(e.target.value);
                 }}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5"
               />

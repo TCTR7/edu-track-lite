@@ -293,7 +293,13 @@ h2 {
     box-shadow: var(--shadow-clay-modal);
   }
   .clay-modal[open] { display: flex; flex-direction: column; }
-  .clay-modal-body { min-height: 0; overflow-y: auto; }
+  .clay-modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: 2rem;
+    overscroll-behavior-y: contain;
+  }
   @media (min-width: 640px) {
     .hero-layout { grid-template-columns: minmax(180px, 32%) minmax(0, 1fr); gap: 1.5rem; padding: 1.5rem 2rem; min-height: 240px; }
     .hero-art { grid-column: 1; }

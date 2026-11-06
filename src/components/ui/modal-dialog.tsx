@@ -84,6 +84,114 @@ export function ModalDialog({
     };
   }, [lightDismiss, onClose]);
 
+  // Adapt to mobile virtual keyboard via visualViewport API
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !open) return;
+
+    const handleViewportChange = () => {
+      if (!window.visualViewport) return;
+      const vv = window.visualViewport;
+      // Clamp dialog max-height so it never extends under the soft keyboard
+      const availableHeight = Math.max(0, Math.floor(vv.height - 16));
+      dialog.style.maxHeight = `${availableHeight}px`;
+
+      // Keep the dialog centered within the visible area on iOS Safari too.
+      dialog.style.top = `${vv.offsetTop}px`;
+      dialog.style.bottom = `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`;
+    };
+
+    handleViewportChange();
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", handleViewportChange);
+      vv.addEventListener("scroll", handleViewportChange);
+    }
+
+    return () => {
+      if (vv) {
+        vv.removeEventListener("resize", handleViewportChange);
+        vv.removeEventListener("scroll", handleViewportChange);
+      }
+      if (dialog) {
+        dialog.style.maxHeight = "";
+        dialog.style.top = "";
+        dialog.style.bottom = "";
+      }
+    };
+  }, [open]);
+
+  // Smoothly scroll focused input into visible viewport within dialog
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !open) return;
+
+    let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+    const cancelScroll = () => clearTimeout(scrollTimer);
+    const handleFocusIn = (e: FocusEvent) => {
+      cancelScroll();
+      const target = e.target;
+      if (!(target instanceof HTMLElement) || !target.matches("input, select, textarea")) return;
+
+      scrollTimer = setTimeout(() => {
+        if (dialog.open && document.activeElement === target) {
+          target.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+          });
+        }
+      }, 150);
+    };
+
+    dialog.addEventListener("focusin", handleFocusIn);
+    dialog.addEventListener("focusout", cancelScroll);
+    return () => {
+      cancelScroll();
+      dialog.removeEventListener("focusin", handleFocusIn);
+      dialog.removeEventListener("focusout", cancelScroll);
+    };
+  }, [open]);
+
+  // Dismiss soft keyboard when user drags/swipes to scroll form on mobile
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !open) return;
+
+    let touchStartY: number | null = null;
+    const bodyEl = dialog.querySelector<HTMLElement>(".clay-modal-body");
+    if (!bodyEl) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches.length === 1 ? e.touches[0].clientY : null;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchStartY === null || e.touches.length !== 1) return;
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - touchStartY;
+      if (Math.abs(deltaY) > 25) {
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLElement &&
+          bodyEl.contains(active) &&
+          active.matches("input, textarea, select")
+        ) {
+          active.blur();
+        }
+      }
+    };
+
+    bodyEl.addEventListener("touchstart", onTouchStart, { passive: true });
+    bodyEl.addEventListener("touchmove", onTouchMove, { passive: true });
+
+    return () => {
+      bodyEl.removeEventListener("touchstart", onTouchStart);
+      bodyEl.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [open]);
+
   return (
     <dialog
       ref={dialogRef}
